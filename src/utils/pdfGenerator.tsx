@@ -51,28 +51,45 @@ const styles = StyleSheet.create({
   table: {
     display: 'flex',
     width: 'auto',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#000000',
+    borderTopWidth: 0.5,
+    borderTopColor: '#000000',
+    borderTopStyle: 'solid',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#000000',
+    borderBottomStyle: 'solid',
     marginBottom: 15,
   },
   tableRow: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: '#000000',
     borderBottomStyle: 'solid',
-    minHeight: 20,
+    borderTopWidth: 0.5,
+    borderTopColor: '#000000',
+    borderTopStyle: 'solid',
+    // borderLeftWidth: 1,
+    // borderLeftColor: '#000000',
+    // borderLeftStyle: 'solid',
+    borderRightWidth: 1,
+    borderRightColor: '#000000',
+    borderRightStyle: 'solid',
+    minHeight: 12,
+    margin: -0.5,
+    padding: 0,
   },
   tableHeader: {
     backgroundColor: '#bfbfbf',
     fontWeight: 'bold',
     fontSize: 5.5,
+    borderTopWidth: 1,
+    borderTopColor: '#000000',
+    borderTopStyle: 'solid',
   },
   tableCell: {
-    borderRightWidth: 1,
-    borderRightColor: '#000000',
-    borderRightStyle: 'solid',
-    padding: '5.4pt',
+    borderLeftWidth: 1,
+    borderLeftColor: '#000000',
+    borderLeftStyle: 'solid',
+    padding: '3pt',
     fontSize: 5.5,
     textAlign: 'center',
   },
@@ -148,7 +165,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                 const groupLocations = locations.slice(groupIndex * 3, (groupIndex + 1) * 3);
                 return (
                   <React.Fragment key={groupIndex}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
+                    <View style={[styles.tableRow, styles.tableHeader]} wrap={false} minPresenceAhead={60}>
                       {groupLocations.map((location) => (
                         <View key={location} style={[styles.tableCell, { width: '175.7pt' }]}>
                           <Text>{location}</Text>
@@ -221,7 +238,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       }
                       
                       return rows.map((rowContent, rowIndex) => (
-                        <View key={rowIndex} style={styles.tableRow}>
+                        <View key={rowIndex} style={styles.tableRow} wrap={false}>
                           {rowContent.map(({ location, hasEvents, pattern, events }) => (
                             <React.Fragment key={location}>
                               <View style={[styles.tableCell, { width: '56.5pt' }]}>
@@ -260,7 +277,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
 
                 return (
                   <React.Fragment key={groupIndex}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
+                    <View style={[styles.tableRow, styles.tableHeader]} wrap={false} minPresenceAhead={60}>
                       {monthGroup.map((month) => (
                         <React.Fragment key={month}>
                           <View style={[styles.tableCell, styles.tableCellDay]}>
@@ -322,7 +339,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       }
                       
                       return rows.map((rowContent, rowIndex) => (
-                        <View key={rowIndex} style={styles.tableRow}>
+                        <View key={rowIndex} style={styles.tableRow} wrap={false}>
                           {rowContent.map(({ month, hasEvent, day, endDay, name, location, department }) => {
                             const dayDisplay = hasEvent 
                               ? (endDay ? `${day} A ${endDay}` : day.toString())
