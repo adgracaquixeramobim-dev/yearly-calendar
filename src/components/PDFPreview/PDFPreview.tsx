@@ -17,6 +17,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
   ministryName,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [detectConflicts, setDetectConflicts] = useState(false);
 
   const handleDownload = async () => {
     setIsGenerating(true);
@@ -26,6 +27,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
         year={year}
         churchName={churchName}
         ministryName={ministryName}
+        detectConflicts={detectConflicts}
       />
     );
     const asPdf = pdf(doc);
@@ -42,6 +44,17 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
   return (
     <div className="pdf-preview">
       <h2>Pré-visualização do PDF</h2>
+      <div className="pdf-actions" style={{ marginBottom: '15px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={detectConflicts}
+            onChange={(e) => setDetectConflicts(e.target.checked)}
+            style={{ cursor: 'pointer' }}
+          />
+          <span>Detectar conflitos (marcar células com 2+ eventos no mesmo dia/local)</span>
+        </label>
+      </div>
       <div className="pdf-viewer-container">
         <PDFViewer width="100%" height="600px">
           <CalendarPDFDocument
@@ -49,6 +62,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
             year={year}
             churchName={churchName}
             ministryName={ministryName}
+            detectConflicts={detectConflicts}
           />
         </PDFViewer>
       </div>

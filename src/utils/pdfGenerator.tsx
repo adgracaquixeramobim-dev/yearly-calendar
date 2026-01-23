@@ -67,9 +67,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: '#000000',
     borderTopStyle: 'solid',
-    // borderLeftWidth: 1,
-    // borderLeftColor: '#000000',
-    // borderLeftStyle: 'solid',
     borderRightWidth: 1,
     borderRightColor: '#000000',
     borderRightStyle: 'solid',
@@ -92,6 +89,9 @@ const styles = StyleSheet.create({
     padding: '3pt',
     fontSize: 5.5,
     textAlign: 'center',
+  },
+  tableCellHighlighted: {
+    backgroundColor: '#ffff00',
   },
   tableCellDay: {
     width: '33.8pt',
@@ -120,6 +120,7 @@ interface PDFDocumentProps {
   year: number;
   churchName?: string;
   ministryName?: string;
+  detectConflicts?: boolean;
 }
 
 export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
@@ -127,6 +128,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
   year,
   churchName = 'Igreja Evangélica Assembleia de Deus no Brasil',
   ministryName = 'Ministério da Graça',
+  detectConflicts = false,
 }) => {
   const recurrentWorshipEvents = events.filter(isRecurrentWorshipEvent);
   const meetingEvents = events.filter(isMeetingEvent);
@@ -137,10 +139,10 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
   const locations = Array.from(worshipServices.keys());
 
   const monthGroups = [
-    [0, 1, 2],   // Jan, Feb, Mar
-    [3, 4, 5],   // Apr, May, Jun
-    [6, 7, 8],   // Jul, Aug, Sep
-    [9, 10, 11], // Oct, Nov, Dec
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [9, 10, 11],
   ];
 
 
@@ -163,12 +165,16 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
             <View style={styles.table}>
               {Array.from({ length: Math.ceil(locations.length / 3) }).map((_, groupIndex) => {
                 const groupLocations = locations.slice(groupIndex * 3, (groupIndex + 1) * 3);
+                const paddedLocations: (string | null)[] = [...groupLocations];
+                while (paddedLocations.length < 3) {
+                  paddedLocations.push(null);
+                }
                 return (
                   <React.Fragment key={groupIndex}>
                     <View style={[styles.tableRow, styles.tableHeader]} wrap={false} minPresenceAhead={60}>
-                      {groupLocations.map((location) => (
-                        <View key={location} style={[styles.tableCell, { width: '175.7pt' }]}>
-                          <Text>{location}</Text>
+                      {paddedLocations.map((location, idx) => (
+                        <View key={location || `empty-${idx}`} style={[styles.tableCell, { width: '175.7pt' }]}>
+                          <Text style={{ fontWeight: 'bold' }}>{location || ''}</Text>
                         </View>
                       ))}
                     </View>
@@ -208,7 +214,11 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       
                       const rows = [];
                       for (let patternIndex = 0; patternIndex < maxPatternsPerLocation; patternIndex++) {
-                        const rowContent = groupLocations.map((location) => {
+                        const rowContent = paddedLocations.map((location) => {
+                          if (!location) {
+                            return { location: null, hasEvents: false, pattern: '', events: [] };
+                          }
+                          
                           const patternMap = worshipServices.get(location);
                           if (!patternMap) {
                             return { location, hasEvents: false, pattern: '', events: [] };
@@ -239,16 +249,27 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       
                       return rows.map((rowContent, rowIndex) => (
                         <View key={rowIndex} style={styles.tableRow} wrap={false}>
-                          {rowContent.map(({ location, hasEvents, pattern, events }) => (
-                            <React.Fragment key={location}>
-                              <View style={[styles.tableCell, { width: '56.5pt' }]}>
-                                <Text>{hasEvents ? pattern : ''}</Text>
-                              </View>
-                              <View style={[styles.tableCell, { width: '119.2pt' }]}>
-                                <Text>{hasEvents ? events.join(', ') : ''}</Text>
-                              </View>
-                            </React.Fragment>
-                          ))}
+                          {rowContent.map(({ location, hasEvents, pattern, events }, idx) => {
+                            const shouldHighlight = detectConflicts && hasEvents && events.length >= 2;
+                            return (
+                              <React.Fragment key={location || `empty-${idx}`}>
+                                <View style={[
+                                  styles.tableCell, 
+                                  { width: '56.5pt' },
+                                  ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
+                                ]}>
+                                  <Text>{hasEvents ? pattern : ''}</Text>
+                                </View>
+                                <View style={[
+                                  styles.tableCell, 
+                                  { width: '119.2pt' },
+                                  ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
+                                ]}>
+                                  <Text>{hasEvents ? events.join(', ') : ''}</Text>
+                                </View>
+                              </React.Fragment>
+                            );
+                          })}
                         </View>
                       ));
                     })()}
@@ -281,13 +302,13 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       {monthGroup.map((month) => (
                         <React.Fragment key={month}>
                           <View style={[styles.tableCell, styles.tableCellDay]}>
-                            <Text>DIA</Text>
+                            <Text style={{ fontWeight: 'bold' }}>DIA</Text>
                           </View>
                           <View style={[styles.tableCell, styles.tableCellMonth]}>
-                            <Text>{getMonthNamePT(month)}</Text>
+                            <Text style={{ fontWeight: 'bold' }}>{getMonthNamePT(month)}</Text>
                           </View>
                           <View style={[styles.tableCell, styles.tableCellDep]}>
-                            <Text>DEP</Text>
+                            <Text style={{ fontWeight: 'bold' }}>DEP</Text>
                           </View>
                         </React.Fragment>
                       ))}
@@ -296,6 +317,27 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       const monthEventsList = monthGroup.map((month) => {
                         const events = meetingsByMonth.get(month) || [];
                         return [...events].sort((a, b) => a.day - b.day);
+                      });
+                      
+                      const duplicateMap = new Map<string, Set<number>>();
+                      monthGroup.forEach((month, monthIndex) => {
+                        const events = monthEventsList[monthIndex];
+                        const dayLocationMap = new Map<string, number[]>();
+                        
+                        events.forEach((event, eventIndex) => {
+                          const key = `${event.day}-${event.location || ''}`;
+                          if (!dayLocationMap.has(key)) {
+                            dayLocationMap.set(key, []);
+                          }
+                          dayLocationMap.get(key)!.push(eventIndex);
+                        });
+                        
+                        dayLocationMap.forEach((indices, key) => {
+                          if (indices.length >= 2) {
+                            const mapKey = `${month}-${key}`;
+                            duplicateMap.set(mapKey, new Set(indices));
+                          }
+                        });
                       });
                       
                       const maxEventsPerMonth = Math.max(
@@ -310,6 +352,9 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                           const event = events[eventIndex];
                           
                           if (event) {
+                            const key = `${month}-${event.day}-${event.location || ''}`;
+                            const shouldHighlight = detectConflicts && duplicateMap.has(key) && duplicateMap.get(key)!.has(eventIndex);
+                            
                             return {
                               month,
                               hasEvent: true,
@@ -318,6 +363,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                               name: event.name,
                               location: event.location,
                               department: event.department || '-',
+                              shouldHighlight,
                             };
                           }
                           
@@ -329,6 +375,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                             name: '',
                             location: undefined,
                             department: '',
+                            shouldHighlight: false,
                           };
                         });
                         
@@ -340,7 +387,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       
                       return rows.map((rowContent, rowIndex) => (
                         <View key={rowIndex} style={styles.tableRow} wrap={false}>
-                          {rowContent.map(({ month, hasEvent, day, endDay, name, location, department }) => {
+                          {rowContent.map(({ month, hasEvent, day, endDay, name, location, department, shouldHighlight }) => {
                             const dayDisplay = hasEvent 
                               ? (endDay ? `${day} A ${endDay}` : day.toString())
                               : '';
@@ -349,13 +396,25 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                               : '';
                             return (
                               <React.Fragment key={month}>
-                                <View style={[styles.tableCell, styles.tableCellDay]}>
+                                <View style={[
+                                  styles.tableCell, 
+                                  styles.tableCellDay,
+                                  ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
+                                ]}>
                                   <Text>{dayDisplay}</Text>
                                 </View>
-                                <View style={[styles.tableCell, styles.tableCellMonth]}>
+                                <View style={[
+                                  styles.tableCell, 
+                                  styles.tableCellMonth,
+                                  ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
+                                ]}>
                                   <Text>{nameDisplay}</Text>
                                 </View>
-                                <View style={[styles.tableCell, styles.tableCellDep]}>
+                                <View style={[
+                                  styles.tableCell, 
+                                  styles.tableCellDep,
+                                  ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
+                                ]}>
                                   <Text>{hasEvent ? department : ''}</Text>
                                 </View>
                               </React.Fragment>

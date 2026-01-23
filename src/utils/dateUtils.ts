@@ -156,6 +156,27 @@ export function getMonthNamePT(month: number): string {
 }
 
 /**
+ * Get the correct gender article for a day of week in Portuguese
+ * DOM (domingo) and SAB (sábado) are masculine, others are feminine
+ */
+function getDayGender(dayOfWeek: number): 'TODO' | 'TODA' {
+  // DOM (0) and SAB (6) are masculine, others (SEG, TER, QUA, QUI, SEX) are feminine
+  return (dayOfWeek === 0 || dayOfWeek === 6) ? 'TODO' : 'TODA';
+}
+
+/**
+ * Get the correct ordinal number based on week number and day gender
+ * Masculine days (DOM, SAB): 1º, 2º, 3º, 4º, 5º
+ * Feminine days (SEG, TER, QUA, QUI, SEX): 1ª, 2ª, 3ª, 4ª, 5ª
+ */
+function getOrdinalPT(weekNumber: number, dayOfWeek: number): string {
+  const isMasculine = (dayOfWeek === 0 || dayOfWeek === 6);
+  const ordinals = ['', '1º', '2º', '3º', '4º', '5º'];
+  const ordinalsFeminine = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
+  return isMasculine ? ordinals[weekNumber] : ordinalsFeminine[weekNumber];
+}
+
+/**
  * Format recurrence pattern description in Portuguese
  */
 export function formatRecurrencePT(event: RecurrentWorshipEvent): string {
@@ -172,7 +193,8 @@ export function formatRecurrencePT(event: RecurrentWorshipEvent): string {
   if (recurrence.type === 'weekly') {
     const daysOfWeek = recurrence.daysOfWeek || [];
     if (daysOfWeek.length === 1) {
-      return `TODA ${getDayNamePT(daysOfWeek[0])}`;
+      const day = daysOfWeek[0];
+      return `${getDayGender(day)} ${getDayNamePT(day)}`;
     }
     return daysOfWeek.map(d => getDayNamePT(d)).join(', ');
   }
@@ -182,18 +204,26 @@ export function formatRecurrencePT(event: RecurrentWorshipEvent): string {
     const daysOfWeek = recurrence.daysOfWeek || [];
     
     if (weeksOfMonth.length === 1 && daysOfWeek.length === 1) {
-      const weekOrdinals = ['', '1º', '2º', '3º', '4º', '5º'];
-      return `${weekOrdinals[weeksOfMonth[0]]} ${getDayNamePT(daysOfWeek[0])}`;
+      const week = weeksOfMonth[0];
+      const day = daysOfWeek[0];
+      return `${getOrdinalPT(week, day)} ${getDayNamePT(day)}`;
     }
     
+    // When multiple weeks or days, we need to handle each combination
+    // For simplicity, if there's only one day, use its gender for all ordinals
+    if (daysOfWeek.length === 1) {
+      const day = daysOfWeek[0];
+      const weekStr = weeksOfMonth.map(w => getOrdinalPT(w, day)).join(', ');
+      return `${weekStr} ${getDayNamePT(day)}`;
+    }
+    
+    // Multiple days - use masculine ordinals as default (or could be more complex)
     const weekStr = weeksOfMonth.map(w => {
       const ordinals = ['', '1º', '2º', '3º', '4º', '5º'];
       return ordinals[w];
     }).join(', ');
     
-    const dayStr = daysOfWeek.length === 1 
-      ? getDayNamePT(daysOfWeek[0])
-      : daysOfWeek.map(d => getDayNamePT(d)).join(', ');
+    const dayStr = daysOfWeek.map(d => getDayNamePT(d)).join(', ');
     
     return `${weekStr} ${dayStr}`;
   }
