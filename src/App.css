@@ -224,6 +224,50 @@
   gap: 10px;
 }
 
+/* Event list tables */
+.event-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 10px;
+}
+
+.event-list .event-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.event-list .event-table th,
+.event-list .event-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: middle;
+}
+
+.event-list .event-table thead th {
+  background: #f0f0f0;
+  font-weight: 600;
+  color: #333;
+}
+
+.event-list .event-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.event-list .event-actions-cell {
+  white-space: nowrap;
+}
+
+.event-list .event-actions-cell .btn {
+  margin-right: 6px;
+}
+
+.event-list .event-actions-cell .btn:last-child {
+  margin-right: 0;
+}
+
 /* Buttons */
 .btn {
   padding: 10px 20px;
@@ -329,6 +373,17 @@
 @media (max-width: 768px) {
   .App {
     padding: 10px;
+  }
+
+  .event-list .event-table th,
+  .event-list .event-table td {
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .event-list .event-actions-cell .btn {
+    display: block;
+    margin-bottom: 4px;
   }
 
   .events-grid {

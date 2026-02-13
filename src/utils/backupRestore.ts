@@ -1,19 +1,21 @@
 import { Event, BackupData, isRecurrentWorshipEvent, isMeetingEvent } from '../types/event';
+import { toCalendarDateString } from './dateUtils';
 
 const BACKUP_VERSION = '1.0.0';
 
 /**
- * Convert Date objects to ISO strings for JSON serialization
+ * Convert Date objects to calendar date strings (YYYY-MM-DD) for JSON serialization.
+ * No timezone conversion — dates are stored statically.
  */
 function serializeEvent(event: Event): any {
   const serialized: any = { ...event };
   
   if (isMeetingEvent(event)) {
     if (event.startDate) {
-      serialized.startDate = event.startDate.toISOString();
+      serialized.startDate = toCalendarDateString(event.startDate);
     }
     if (event.endDate) {
-      serialized.endDate = event.endDate.toISOString();
+      serialized.endDate = toCalendarDateString(event.endDate);
     }
   }
   
@@ -21,7 +23,7 @@ function serializeEvent(event: Event): any {
     if (event.recurrence?.endDate) {
       serialized.recurrence = {
         ...event.recurrence,
-        endDate: event.recurrence.endDate.toISOString(),
+        endDate: toCalendarDateString(event.recurrence.endDate),
       };
     }
   }
@@ -30,8 +32,8 @@ function serializeEvent(event: Event): any {
 }
 
 /**
- * Parse a date string as a local date (ignoring timezone)
- * This prevents timezone shifts when parsing ISO date strings
+ * Parse a date string as a static calendar date (YYYY-MM-DD or ISO with T).
+ * Ignores timezone so dates are always the literal day/month/year.
  */
 function parseLocalDate(dateString: string): Date {
   const datePart = dateString.split('T')[0];

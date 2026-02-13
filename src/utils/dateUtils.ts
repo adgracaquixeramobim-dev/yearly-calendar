@@ -1,4 +1,4 @@
-import { startOfYear, endOfYear, addDays, addWeeks, addMonths, getDay, getDate, isSameDay, format } from 'date-fns';
+import { startOfYear, endOfYear, addDays, addWeeks, addMonths, getDay, getDate, isSameDay } from 'date-fns';
 import { ExpandedEvent, RecurrentWorshipEvent } from '../types/event';
 
 /**
@@ -130,10 +130,33 @@ export function expandRecurrentEvent(event: RecurrentWorshipEvent, year: number)
 }
 
 /**
- * Format date for display in Portuguese format
+ * Parse a date string (YYYY-MM-DD) as a static calendar date at local midnight.
+ * Ignores timezone so the displayed date never shifts.
+ */
+export function parseCalendarDate(dateString: string): Date {
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Get calendar date as YYYY-MM-DD using local date parts only (no timezone conversion).
+ */
+export function toCalendarDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Format date for display in Portuguese format (static calendar date, no timezone).
  */
 export function formatDatePT(date: Date): string {
-  return format(date, 'dd/MM/yyyy');
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${d}/${m}/${y}`;
 }
 
 /**

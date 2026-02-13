@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RecurrencePattern } from '../../types/event';
+import { parseCalendarDate, toCalendarDateString } from '../../utils/dateUtils';
 
 interface RecurrenceSelectorProps {
   value?: RecurrencePattern;
@@ -19,7 +20,7 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(value?.daysOfWeek || []);
   const [weekOfMonth, setWeekOfMonth] = useState<number[]>(value?.weekOfMonth || []);
   const [endDate, setEndDate] = useState<string>(
-    value?.endDate ? value.endDate.toISOString().split('T')[0] : ''
+    value?.endDate ? toCalendarDateString(value.endDate) : ''
   );
 
   useEffect(() => {
@@ -33,7 +34,7 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
       interval: type === 'daily' || type === 'weekly' ? interval : undefined,
       daysOfWeek: type === 'weekly' || type === 'monthly' ? daysOfWeek : undefined,
       weekOfMonth: type === 'monthly' ? weekOfMonth : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      endDate: endDate ? parseCalendarDate(endDate) : undefined,
     };
 
     onChange(pattern);

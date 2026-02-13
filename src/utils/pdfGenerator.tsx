@@ -11,6 +11,7 @@ import { Event, isRecurrentWorshipEvent, isMeetingEvent } from '../types/event';
 import {
   organizeRecurrentWorshipByLocation,
   organizeMeetingsByMonth,
+  type RecurrentWorshipEntry,
 } from './eventOrganizer';
 import { getMonthNamePT } from './dateUtils';
 import { LOGO_BASE64 } from './logoBase64';
@@ -156,7 +157,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
           />
           <Text style={styles.title}>{churchName}</Text>
           <Text style={styles.subtitle}>- {ministryName} -</Text>
-          <Text style={styles.subtitle}>Calendário de Cultos – {year} – Campo</Text>
+          <Text style={styles.subtitle}>Calendário de Cultos – {year} – Quixeramobim</Text>
         </View>
 
         {locations.length > 0 && (
@@ -182,15 +183,15 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       const locationPatternPairs: Array<{
                         location: string;
                         pattern: string;
-                        events: string[];
+                        entries: RecurrentWorshipEntry[];
                       }> = [];
                       
                       groupLocations.forEach((location) => {
                         const patternMap = worshipServices.get(location);
                         if (patternMap) {
-                          patternMap.forEach((events, pattern) => {
-                            if (events && events.length > 0) {
-                              locationPatternPairs.push({ location, pattern, events });
+                          patternMap.forEach((entries, pattern) => {
+                            if (entries && entries.length > 0) {
+                              locationPatternPairs.push({ location, pattern, entries });
                             }
                           });
                         }
@@ -205,8 +206,8 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                           const patternMap = worshipServices.get(location);
                           if (!patternMap) return 0;
                           let count = 0;
-                          patternMap.forEach((events) => {
-                            if (events && events.length > 0) count++;
+                          patternMap.forEach((entries) => {
+                            if (entries && entries.length > 0) count++;
                           });
                           return count;
                         })
@@ -216,29 +217,29 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       for (let patternIndex = 0; patternIndex < maxPatternsPerLocation; patternIndex++) {
                         const rowContent = paddedLocations.map((location) => {
                           if (!location) {
-                            return { location: null, hasEvents: false, pattern: '', events: [] };
+                            return { location: null, hasEvents: false, pattern: '', entries: [] as RecurrentWorshipEntry[] };
                           }
                           
                           const patternMap = worshipServices.get(location);
                           if (!patternMap) {
-                            return { location, hasEvents: false, pattern: '', events: [] };
+                            return { location, hasEvents: false, pattern: '', entries: [] as RecurrentWorshipEntry[] };
                           }
                           
-                          const patternsWithEvents: Array<{ pattern: string; events: string[] }> = [];
-                          patternMap.forEach((events, pattern) => {
-                            if (events && events.length > 0) {
-                              patternsWithEvents.push({ pattern, events });
+                          const patternsWithEntries: Array<{ pattern: string; entries: RecurrentWorshipEntry[] }> = [];
+                          patternMap.forEach((entries, pattern) => {
+                            if (entries && entries.length > 0) {
+                              patternsWithEntries.push({ pattern, entries });
                             }
                           });
                           
-                          patternsWithEvents.sort((a, b) => a.pattern.localeCompare(b.pattern));
+                          patternsWithEntries.sort((a, b) => a.pattern.localeCompare(b.pattern));
                           
-                          if (patternIndex < patternsWithEvents.length) {
-                            const { pattern, events } = patternsWithEvents[patternIndex];
-                            return { location, hasEvents: true, pattern, events };
+                          if (patternIndex < patternsWithEntries.length) {
+                            const { pattern, entries } = patternsWithEntries[patternIndex];
+                            return { location, hasEvents: true, pattern, entries };
                           }
                           
-                          return { location, hasEvents: false, pattern: '', events: [] };
+                          return { location, hasEvents: false, pattern: '', entries: [] as RecurrentWorshipEntry[] };
                         });
                         
                         const hasAnyContent = rowContent.some(({ hasEvents }) => hasEvents);
@@ -249,8 +250,17 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                       
                       return rows.map((rowContent, rowIndex) => (
                         <View key={rowIndex} style={styles.tableRow} wrap={false}>
-                          {rowContent.map(({ location, hasEvents, pattern, events }, idx) => {
-                            const shouldHighlight = detectConflicts && hasEvents && events.length >= 2;
+                          {rowContent.map(({ location, hasEvents, pattern, entries }, idx) => {
+                            const hasConflict = hasEvents && entries.length >= 2 && (() => {
+                              const byTime = new Map<string, number>();
+                              entries.forEach((e) => {
+                                const t = e.time ?? '';
+                                byTime.set(t, (byTime.get(t) ?? 0) + 1);
+                              });
+                              return Array.from(byTime.values()).some((n) => n >= 2);
+                            })();
+                            const shouldHighlight = detectConflicts && hasConflict;
+                            const eventNames = entries.map((e) => e.name).join(', ');
                             return (
                               <React.Fragment key={location || `empty-${idx}`}>
                                 <View style={[
@@ -265,7 +275,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                                   { width: '119.2pt' },
                                   ...(shouldHighlight ? [styles.tableCellHighlighted] : [])
                                 ]}>
-                                  <Text>{hasEvents ? events.join(', ') : ''}</Text>
+                                  <Text>{hasEvents ? eventNames : ''}</Text>
                                 </View>
                               </React.Fragment>
                             );
@@ -280,7 +290,23 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
           </View>
         )}
 
-        {meetingsByMonth.size > 0 && (
+        <View style={styles.footer}>
+          <Text>Calendário gerado em {new Date().toLocaleDateString('pt-BR')}</Text>
+        </View>
+      </Page>
+
+      {meetingsByMonth.size > 0 && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Image
+              style={styles.logo}
+              src={LOGO_BASE64}
+            />
+            <Text style={styles.title}>{churchName}</Text>
+            <Text style={styles.subtitle}>- {ministryName} -</Text>
+            <Text style={styles.subtitle}>Calendário de Cultos – {year} – Quixeramobim</Text>
+          </View>
+
           <View style={{ marginTop: 15 }}>
             <Text style={styles.sectionTitle}>Calendário de Reuniões e Eventos – {year}</Text>
             <View style={styles.table}>
@@ -325,7 +351,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                         const dayLocationMap = new Map<string, number[]>();
                         
                         events.forEach((event, eventIndex) => {
-                          const key = `${event.day}-${event.location || ''}`;
+                          const key = `${event.day}-${event.location || ''}-${event.hour ?? ''}`;
                           if (!dayLocationMap.has(key)) {
                             dayLocationMap.set(key, []);
                           }
@@ -352,7 +378,7 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
                           const event = events[eventIndex];
                           
                           if (event) {
-                            const key = `${month}-${event.day}-${event.location || ''}`;
+                            const key = `${month}-${event.day}-${event.location || ''}-${event.hour ?? ''}`;
                             const shouldHighlight = detectConflicts && duplicateMap.has(key) && duplicateMap.get(key)!.has(eventIndex);
                             
                             return {
@@ -428,12 +454,12 @@ export const CalendarPDFDocument: React.FC<PDFDocumentProps> = ({
               })}
             </View>
           </View>
-        )}
 
-        <View style={styles.footer}>
-          <Text>Calendário gerado em {new Date().toLocaleDateString('pt-BR')}</Text>
-        </View>
-      </Page>
+          <View style={styles.footer}>
+            <Text>Calendário gerado em {new Date().toLocaleDateString('pt-BR')}</Text>
+          </View>
+        </Page>
+      )}
     </Document>
   );
 };

@@ -2,18 +2,21 @@ import { RecurrentWorshipEvent, MeetingEvent } from '../types/event';
 import { expandRecurrentEvent, formatRecurrencePT } from './dateUtils';
 import { getDate, getMonth } from 'date-fns';
 
+export type RecurrentWorshipEntry = { name: string; time?: string };
+
 /**
  * Organize recurrent worship services by location
  */
 export function organizeRecurrentWorshipByLocation(
   events: RecurrentWorshipEvent[],
   year: number
-): Map<string, Map<string, string[]>> {
-  const locationMap = new Map<string, Map<string, string[]>>();
+): Map<string, Map<string, RecurrentWorshipEntry[]>> {
+  const locationMap = new Map<string, Map<string, RecurrentWorshipEntry[]>>();
 
   events.forEach((event) => {
     const expanded = expandRecurrentEvent(event, year);
     const recurrencePattern = formatRecurrencePT(event);
+    const time = event.time;
 
     expanded.forEach((exp) => {
       const location = exp.location;
@@ -26,9 +29,9 @@ export function organizeRecurrentWorshipByLocation(
         patternMap.set(recurrencePattern, []);
       }
 
-      const eventNames = patternMap.get(recurrencePattern)!;
-      if (!eventNames.includes(event.name)) {
-        eventNames.push(event.name);
+      const entries = patternMap.get(recurrencePattern)!;
+      if (!entries.some((e) => e.name === event.name && (e.time ?? '') === (time ?? ''))) {
+        entries.push({ name: event.name, time });
       }
     });
   });
@@ -44,8 +47,8 @@ export function organizeRecurrentWorshipByLocation(
 export function organizeMeetingsByMonth(
   events: MeetingEvent[],
   year: number
-): Map<number, Array<{ day: number; name: string; department?: string; endDay?: number; location?: string }>> {
-  const monthlyMap = new Map<number, Array<{ day: number; name: string; department?: string; endDay?: number; location?: string }>>();
+): Map<number, Array<{ day: number; name: string; department?: string; endDay?: number; location?: string; hour?: string }>> {
+  const monthlyMap = new Map<number, Array<{ day: number; name: string; department?: string; endDay?: number; location?: string; hour?: string }>>();
 
   events.forEach((event) => {
     const startMonth = getMonth(event.startDate);
@@ -67,6 +70,7 @@ export function organizeMeetingsByMonth(
       department: event.department,
       endDay: endDay && endMonth === startMonth ? endDay : undefined,
       location: event.location,
+      hour: event.hour,
     });
   });
 

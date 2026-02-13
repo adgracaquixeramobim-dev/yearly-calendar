@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Event, RecurrentWorshipEvent, MeetingEvent, isRecurrentWorshipEvent, isMeetingEvent } from '../../types/event';
 import RecurrenceSelector from '../RecurrenceSelector/RecurrenceSelector';
 import { validateEvent } from '../../utils/validation';
+import { parseCalendarDate, toCalendarDateString } from '../../utils/dateUtils';
 
 interface EventFormProps {
   event?: Event;
@@ -31,10 +32,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
   );
 
   const [startDate, setStartDate] = useState<string>(
-    (event && isMeetingEvent(event)) ? event.startDate.toISOString().split('T')[0] : ''
+    (event && isMeetingEvent(event)) ? toCalendarDateString(event.startDate) : ''
   );
   const [endDate, setEndDate] = useState<string>(
-    (event && isMeetingEvent(event) && event.endDate) ? event.endDate.toISOString().split('T')[0] : ''
+    (event && isMeetingEvent(event) && event.endDate) ? toCalendarDateString(event.endDate) : ''
   );
   const [hour, setHour] = useState(
     (event && isMeetingEvent(event)) ? event.hour : ''
@@ -59,8 +60,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
         setDepartment(event.department || '');
       } else if (isMeetingEvent(event)) {
         setEventType('meeting-event');
-        setStartDate(event.startDate ? event.startDate.toISOString().split('T')[0] : '');
-        setEndDate(event.endDate ? event.endDate.toISOString().split('T')[0] : '');
+        setStartDate(event.startDate ? toCalendarDateString(event.startDate) : '');
+        setEndDate(event.endDate ? toCalendarDateString(event.endDate) : '');
         setHour(event.hour || '');
         setMeetingLocation(event.location || '');
         setMeetingDepartment(event.department || '');
@@ -93,8 +94,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
         setErrors(['Data de início é obrigatória para reuniões/eventos']);
         return;
       }
-      const start = new Date(startDate);
-      const end = endDate ? new Date(endDate) : undefined;
+      const start = parseCalendarDate(startDate);
+      const end = endDate ? parseCalendarDate(endDate) : undefined;
       
       if (end && end < start) {
         setErrors(['Data de fim deve ser posterior à data de início']);
