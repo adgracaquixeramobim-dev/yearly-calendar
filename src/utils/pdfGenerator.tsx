@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   },
   header: {
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   logo: {
     width: 60.33,
