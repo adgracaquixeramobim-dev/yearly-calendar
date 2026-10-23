@@ -47,7 +47,15 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
     (event && isMeetingEvent(event)) ? event.department : ''
   );
 
-  const departments = ['MIS', 'SEN', 'JOV', 'INF', 'FAM', 'EBD', ''];
+  const departments = [
+    { value: 'MIS', label: 'MIS - Missão' },
+    { value: 'JOV', label: 'JOV - Jovens' },
+    { value: 'SEN', label: 'SEN - Senhoras' },
+    { value: 'INF', label: 'INF - Infantil' },
+    { value: 'EBD', label: 'EBD - Escola Bíblica Dominical' },
+    { value: 'FAM', label: 'FAM - Família' },
+    { value: '', label: 'Nenhum' },
+  ];
 
   useEffect(() => {
     if (event) {
@@ -152,22 +160,44 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
         </div>
       )}
 
-      <div className="form-group">
-        <label htmlFor="eventType">Tipo de Evento *</label>
-        <select
-          id="eventType"
-          value={eventType}
-          onChange={(e) => {
-            setEventType(e.target.value as 'recurrent-worship' | 'meeting-event');
-            setErrors([]);
-          }}
-          required
-          className="form-control"
-        >
-          <option value="recurrent-worship">Culto Recorrente</option>
-          <option value="meeting-event">Reunião/Evento</option>
-        </select>
-      </div>
+      <fieldset className="type-picker">
+        <legend>Escolha um tipo de evento</legend>
+        <p className="type-picker-hint">Selecione apenas uma opção. O formulário abaixo vale só para o tipo escolhido.</p>
+        <div className="type-picker-options">
+          <label className="type-option">
+            <input
+              type="radio"
+              name="eventType"
+              value="recurrent-worship"
+              checked={eventType === 'recurrent-worship'}
+              onChange={() => {
+                setEventType('recurrent-worship');
+                setErrors([]);
+              }}
+            />
+            <span className="type-option-copy">
+              <span className="type-option-title">Culto recorrente</span>
+              <span className="type-option-detail">Repete ao longo do ano, como todo domingo.</span>
+            </span>
+          </label>
+          <label className="type-option">
+            <input
+              type="radio"
+              name="eventType"
+              value="meeting-event"
+              checked={eventType === 'meeting-event'}
+              onChange={() => {
+                setEventType('meeting-event');
+                setErrors([]);
+              }}
+            />
+            <span className="type-option-copy">
+              <span className="type-option-title">Reunião ou evento</span>
+              <span className="type-option-detail">Acontece em uma data marcada.</span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       <div className="form-group">
         <label htmlFor="name">Nome do Evento *</label>
@@ -224,8 +254,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
               className="form-control"
             >
               {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept || 'Nenhum'}
+                <option key={dept.value || 'none'} value={dept.value}>
+                  {dept.label}
                 </option>
               ))}
             </select>
@@ -291,8 +321,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, onSubmit, onCancel }) => {
               className="form-control"
             >
               {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept || 'Nenhum'}
+                <option key={dept.value || 'none'} value={dept.value}>
+                  {dept.label}
                 </option>
               ))}
             </select>

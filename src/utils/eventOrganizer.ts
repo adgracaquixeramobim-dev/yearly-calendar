@@ -1,6 +1,99 @@
-import { RecurrentWorshipEvent, MeetingEvent } from '../types/event';
-import { expandRecurrentEvent, formatRecurrencePT } from './dateUtils';
+import {
+  Event,
+  RecurrentWorshipEvent,
+  MeetingEvent,
+  isRecurrentWorshipEvent,
+  isMeetingEvent,
+} from '../types/event';
+import { expandRecurrentEvent, formatDatePT, formatRecurrencePT } from './dateUtils';
 import { getDate, getMonth } from 'date-fns';
+
+export interface DraftConflict {
+  id: string;
+  summary: string;
+  eventIds: string[];
+  eventNames: string[];
+}
+
+function conflictLabel(parts: string[]): string {
+  return parts.map((part) => part || '—').join(' · ');
+}
+
+/**
+ * Conflicts follow the PDF rules:
+ * cultos that share location, recurrence text, and time;
+ * meetings that share calendar day, location, and time.
+ * A missing place or time still matches another missing place or time.
+ */
+export function findDraftConflicts(events: Event[], year: number): DraftConflict[] {
+  const conflicts: DraftConflict[] = [];
+
+  const worshipGroups = new Map<string, RecurrentWorshipEvent[]>();
+  events.filter(isRecurrentWorshipEvent).forEach((event) => {
+    if (expandRecurrentEvent(event, year).length === 0) return;
+    const key = [event.location, formatRecurrencePT(event), event.time ?? ''].join('\0');
+    const group = worshipGroups.get(key) ?? [];
+    group.push(event);
+    worshipGroups.set(key, group);
+  });
+
+  worshipGroups.forEach((group, key) => {
+    if (group.length < 2) return;
+    const [location, pattern, time] = key.split('\0');
+    conflicts.push({
+      id: `worship:${key}`,
+      summary: conflictLabel([
+        location || 'sem local',
+        pattern || 'sem recorrência',
+        time || 'sem horário',
+      ]),
+      eventIds: group.map((event) => event.id),
+      eventNames: group.map((event) => event.name),
+    });
+  });
+
+  const meetingGroups = new Map<string, MeetingEvent[]>();
+  events.filter(isMeetingEvent).forEach((event) => {
+    const key = [
+      formatDatePT(event.startDate),
+      event.location ?? '',
+      event.hour ?? '',
+    ].join('\0');
+    const group = meetingGroups.get(key) ?? [];
+    group.push(event);
+    meetingGroups.set(key, group);
+  });
+
+  meetingGroups.forEach((group, key) => {
+    if (group.length < 2) return;
+    const [date, location, hour] = key.split('\0');
+    conflicts.push({
+      id: `meeting:${key}`,
+      summary: conflictLabel([
+        date,
+        location || 'sem local',
+        hour || 'sem horário',
+      ]),
+      eventIds: group.map((event) => event.id),
+      eventNames: group.map((event) => event.name),
+    });
+  });
+
+  return conflicts;
+}
+
+export function conflictPartnerNames(conflicts: DraftConflict[], eventId: string): string {
+  const names: string[] = [];
+  conflicts.forEach((conflict) => {
+    if (!conflict.eventIds.includes(eventId)) return;
+    conflict.eventIds.forEach((id, index) => {
+      if (id !== eventId && !names.includes(conflict.eventNames[index])) {
+        names.push(conflict.eventNames[index]);
+      }
+    });
+  });
+  return names.join(', ');
+}
 
 export type RecurrentWorshipEntry = { name: string; time?: string };
 

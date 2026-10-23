@@ -5,6 +5,10 @@ import { exportBackup, importBackup } from '../../utils/backupRestore';
 interface BackupRestoreProps {
   events: Event[];
   onRestore: (events: Event[], metadata?: { churchName?: string; ministryName?: string; year?: number }) => void;
+  onExport?: () => void;
+  exportDisabled?: boolean;
+  exportClassName?: string;
+  exportLabel?: string;
   metadata?: {
     churchName?: string;
     ministryName?: string;
@@ -15,11 +19,20 @@ interface BackupRestoreProps {
 const BackupRestore: React.FC<BackupRestoreProps> = ({
   events,
   onRestore,
+  onExport,
+  exportDisabled = false,
+  exportClassName = 'btn btn-primary btn-large',
+  exportLabel = 'Baixar JSON',
   metadata,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBackup = () => {
+    if (exportDisabled) return;
+    if (onExport) {
+      onExport();
+      return;
+    }
     exportBackup(events, metadata);
   };
 
@@ -59,11 +72,16 @@ const BackupRestore: React.FC<BackupRestoreProps> = ({
 
   return (
     <div className="backup-restore">
-      <button onClick={handleBackup} className="btn btn-secondary">
-        📥 Fazer Backup (Download JSON)
+      <button
+        type="button"
+        onClick={handleBackup}
+        className={exportClassName}
+        disabled={exportDisabled}
+      >
+        {exportLabel}
       </button>
-      <button onClick={handleRestoreClick} className="btn btn-secondary">
-        📤 Restaurar Backup (Upload JSON)
+      <button type="button" onClick={handleRestoreClick} className="btn btn-secondary">
+        Restaurar JSON
       </button>
       <input
         ref={fileInputRef}

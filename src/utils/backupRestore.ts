@@ -7,7 +7,7 @@ const BACKUP_VERSION = '1.0.0';
  * Convert Date objects to calendar date strings (YYYY-MM-DD) for JSON serialization.
  * No timezone conversion — dates are stored statically.
  */
-function serializeEvent(event: Event): any {
+export function serializeEvent(event: Event): any {
   const serialized: any = { ...event };
   
   if (isMeetingEvent(event)) {
@@ -44,7 +44,7 @@ function parseLocalDate(dateString: string): Date {
 /**
  * Convert ISO strings back to Date objects
  */
-function deserializeEvent(data: any): Event {
+export function deserializeEvent(data: any): Event {
   const event: any = { ...data };
   
   if (data.eventType === 'meeting-event') {
@@ -71,34 +71,92 @@ function deserializeEvent(data: any): Event {
   return event as Event;
 }
 
-/**
- * Export all events to a JSON file
- */
-export function exportBackup(
-  events: Event[],
-  metadata?: { churchName?: string; ministryName?: string; year?: number }
-): void {
+export type BackupMetadata = {
+  churchName?: string;
+  ministryName?: string;
+  year?: number;
+};
+
+function backupFilename(metadata?: BackupMetadata): string {
+  if (metadata?.year) return `calendario-${metadata.year}.json`;
+  const dateStr = new Date().toISOString().split('T')[0];
+  return `calendario-${dateStr}.json`;
+}
+
+export function createBackupFile(events: Event[], metadata?: BackupMetadata): File {
   const backupData: BackupData = {
     version: BACKUP_VERSION,
     exportDate: new Date().toISOString(),
     events: events.map(serializeEvent),
     metadata,
   };
-  
   const jsonString = JSON.stringify(backupData, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  const dateStr = new Date().toISOString().split('T')[0];
-  const filename = `calendar-backup-${dateStr}.json`;
-  
+  return new File([jsonString], backupFilename(metadata), { type: 'application/json' });
+}
+
+function downloadFile(file: File): void {
+  const url = URL.createObjectURL(file);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = file.name;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+function shareableFile(file: File): File | null {
+  if (typeof navigator.share !== 'function' || typeof navigator.canShare !== 'function') {
+    return null;
+  }
+  if (navigator.canShare({ files: [file] })) return file;
+  const plain = new File([file], file.name, { type: 'text/plain' });
+  if (navigator.canShare({ files: [plain] })) return plain;
+  return null;
+}
+
+/**
+ * Open the device share sheet with the JSON attached so the user can send it on WhatsApp.
+ * When the device cannot share files, download the JSON and open WhatsApp with instructions.
+ */
+export async function shareBackup(
+  events: Event[],
+  metadata?: BackupMetadata
+): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const file = createBackupFile(events, metadata);
+  const message = metadata?.year
+    ? `Calendário anual ${metadata.year}. Segue o arquivo JSON.`
+    : 'Calendário anual. Segue o arquivo JSON.';
+  const fileToShare = shareableFile(file);
+
+  if (fileToShare) {
+    try {
+      await navigator.share({
+        files: [fileToShare],
+        title: file.name,
+        text: message,
+      });
+      return 'shared';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+    }
+  }
+
+  downloadFile(file);
+  const whatsappText = `${message} O arquivo ${file.name} foi baixado neste aparelho. Anexe esse JSON na conversa. Não envie o PDF.`;
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(whatsappText)}`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+  return 'downloaded';
+}
+
+/**
+ * Export all events to a JSON file
+ */
+export function exportBackup(events: Event[], metadata?: BackupMetadata): void {
+  downloadFile(createBackupFile(events, metadata));
 }
 
 /**
